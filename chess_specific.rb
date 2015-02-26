@@ -1,9 +1,11 @@
 class Pawn < Piece
   # en passant
+  attr_accessor :moved, :en_passant
   def initialize(color, pos, board)
     super(color, pos, 'P')
     @board = board
     @moved = false
+    @en_passant = false
     @v_dirs = {
       white: [
         [-1, 1],
@@ -24,13 +26,21 @@ class Pawn < Piece
     @moved = true
   end
 
+  def moved?
+    @moved
+  end
+
   def valid_direction?(from, to)
     move_dir = sub_pos(from, to)
     eat_dir1 = @v_dirs[@color][0]
     eat_dir2 = @v_dirs[@color][2]
     poss_moves = [@v_dirs[@color][1]]
-    poss_moves << eat_dir1 if @board[add_pos(from, eat_dir1)]
-    poss_moves << eat_dir2 if @board[add_pos(from, eat_dir2)]
+    pas1 = @board[add_pos(from, [0, 1])]
+    pas2 = @board[add_pos(from, [0, -1])]
+    eat1_poss = @board[add_pos(from, eat_dir1)] || (pas1 && pas1.is_a?(Pawn) && pas1.en_passant?)
+    eat2_poss = @board[add_pos(from, eat_dir2)] || (pas2 && pas2.is_a?(Pawn) && pas2.en_passant?)
+    poss_moves << eat_dir1 if eat1_poss
+    poss_moves << eat_dir2 if eat2_poss
     poss_moves << @v_dirs[@color][3] unless @moved
     poss_moves.include?(move_dir)
   end
@@ -67,6 +77,10 @@ class Pawn < Piece
     else
       false
     end
+  end
+
+  def en_passant?
+    @en_passant
   end
 end
 

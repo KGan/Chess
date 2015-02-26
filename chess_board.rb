@@ -15,7 +15,7 @@ end
 
 class Board
   # draw
-  attr_accessor :kings_position, :board, :history
+  attr_accessor :kings_position, :board, :history, :passantable
 
   CURSOR_DIR = {
     :up => [-1, 0],
@@ -25,6 +25,7 @@ class Board
   }
 
   def initialize
+    @passantable = []
     @history = History.new
     @cursor = [7, 0]
     @board = Array.new(8) { Array.new(8) }
@@ -76,29 +77,46 @@ class Board
   end
 
   def move(start_pos, end_pos, color, checkpromotion = true)
-    # relies on game and valid_move to supply a good move
-    # executes good move
-    #castle
     if is_castle?(start_pos, end_pos, color)
       step = end_pos.last <=> start_pos.last
       king_end = [start_pos.first, start_pos.last + (2 * step)]
       @kings_position[color] = king_end
       rook_end = [start_pos.first, start_pos.last + step]
       castle(start_pos, king_end, end_pos, rook_end)
+      @passantable = []
     else
       piece = self[start_pos]
-      piece.set_moved if piece.is_a?(Pawn) || piece.is_a?(King) || piece.is_a?(Rook)
       @kings_position[color] = end_pos if piece.symbol == '&'
       piece.pos = end_pos
       if self[end_pos]
         self[end_pos].pos = nil
       end
       self[end_pos] = piece
-      #promotion
       if checkpromotion && promotions?(piece)
         promote_piece(piece)
       end
       self[start_pos] = nil
+
+      if(piece.is_a?(Pawn))
+        colors = {:white => 1, :black => -1}
+        pass_position = [end_pos.first + colors[piece.color], end_pos.last]
+        poss_pass = self[pass_position]
+        if poss_pass && passantable.include?(poss_pass)
+          poss_pass.pos = nil
+          self[pass_position] = nil
+        end
+      end
+      @passantable.each { |c| c.en_passant = false }
+      @passantable = []
+
+      if piece.is_a?(Pawn)
+        @passantable << piece if !piece.moved?
+        piece.en_passant = true if !piece.moved?
+        piece.en_passant = false if piece.moved?
+        piece.set_moved
+      elsif piece.is_a?(King) || piece.is_a?(Rook)
+        piece.set_moved
+      end
     end
     @history.record(start_pos, end_pos)
   end
@@ -216,6 +234,7 @@ class Board
     new_board.kings_position = Marshal.load(Marshal.dump(@kings_position))
     new_board.board = @board.deep_dup(new_board)
     new_board.history = @history.deep_dup
+    new_board.passantable = @passantable.deep_dup(new_board)
     new_board
   end
 

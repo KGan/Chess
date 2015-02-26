@@ -25,6 +25,8 @@ class Board
   }
 
   def initialize
+    @selected = nil
+    @possible_moves = []
     @passantable = []
     @history = History.new
     @cursor = [7, 0]
@@ -256,9 +258,10 @@ class Board
       row.each_with_index do |tile, col_index|
         is_black = ((row_index + col_index) % 2 == 1)
         back_c = is_black ? :green : :magenta
-        if @cursor == [row_index, col_index]
-          back_c = :red
-        end
+        back_c = :white if @highlighted == [row_index, col_index]
+        back_c = :yellow if @possible_moves.include?([row_index, col_index])
+        back_c = :red if @cursor == [row_index, col_index]
+
         if tile
           tile.display(back_c)
         else
@@ -270,6 +273,17 @@ class Board
     end
     history_space
   end
+
+  def highlight(pos)
+    @highlighted = pos
+    @possible_moves = valid_moves_for(self[pos]) if self[pos]
+  end
+
+  def reset_highlight
+    @highlighted = nil
+    @possible_moves = []
+  end
+  
 private
   def render_rules
     puts "----------------------------------------------------"
@@ -287,6 +301,8 @@ private
   def print_blankrow(r)
     (0..7).each do |i|
       back_c = (i+r) % 2 == 1 ? :green : :magenta
+      back_c = :white if @highlighted == [r,i]
+      back_c = :yellow if @possible_moves.include?([r,i])
       back_c = :red if @cursor == [r, i]
       print "     ".colorize(background: back_c)
     end

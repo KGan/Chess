@@ -21,7 +21,9 @@ class Player
       when "\e[D" #left
         board.cursor_move(:left)
       when ' '
-        move_array << board.get_cursor_position
+        highlighted = board.get_cursor_position
+        move_array << highlighted
+        board.highlight(highlighted) if highlighted
       when 'h'
         return ['h']
       when 's'
@@ -41,8 +43,10 @@ class Player
       if move_array.length < 2
         retry
       elsif board.valid_move?(move_array.first, move_array.last, @color)
+        board.reset_highlight
         return move_array
       else
+        board.reset_highlight
         move_array = []
         retry
       end
